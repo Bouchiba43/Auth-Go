@@ -1,0 +1,59 @@
+CREATE TABLE projects (
+    project_id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    WebsiteURL string `json:"website_url" gorm:"UNIQUE"`
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE cohorts (
+    cohort_id SERIAL PRIMARY KEY,
+    project_id INTEGER NOT NULL REFERENCES projects(project_id),
+    version VARCHAR(50) NOT NULL,
+    start_date DATE,
+    end_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE users (
+    user_id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE stages (
+    stage_id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO stages (name) VALUES ('login'), ('signup'), ('monetization'), ('d7'), ('d30');
+
+CREATE TABLE flows (
+    flow_id SERIAL PRIMARY KEY,
+    cohort_id INTEGER NOT NULL REFERENCES cohorts(cohort_id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE flowsteps (
+    flowstep_id SERIAL PRIMARY KEY,
+    flow_id INTEGER NOT NULL REFERENCES flows(flow_id),
+    stage_id INTEGER NOT NULL REFERENCES stages(stage_id),
+    step_order INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(flow_id, step_order)
+);
+
+CREATE TABLE user_flowsteps (
+    user_flowstep_id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(user_id),
+    flowstep_id INTEGER NOT NULL REFERENCES flowsteps(flowstep_id),
+    status VARCHAR(50) NOT NULL CHECK (status IN ('not started', 'in progress', 'completed', 'exited')),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
