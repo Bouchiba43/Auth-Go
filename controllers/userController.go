@@ -5,14 +5,35 @@ import (
 	"os"
 	"time"
 
-	"github.com/Bouchiba43/Auth-Go/initializers"
 	"github.com/Bouchiba43/Auth-Go/models"
+	"github.com/Bouchiba43/Auth-Go/repositories"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func Signup(c *gin.Context) {
+type UserController struct {
+	Repository *repositories.UserRepository
+}
+
+func NewUserController(repository *repositories.UserRepository) *UserController {
+	return &UserController{
+		Repository: repository,
+	}
+}
+
+func (controller *UserController) GetAll(c *gin.Context) {
+	users, err := controller.Repository.FindAll()
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to find users"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"users": users})
+}
+
+func (controller *UserController) Signup(c *gin.Context) {
 	//GET the email and password from the request
 
 	var body struct {
@@ -27,9 +48,10 @@ func Signup(c *gin.Context) {
 
 	//Check if the email is already taken
 
-	var existingUser models.User
-	if result := initializers.DB.Where("email = ?", body.Email).First(&existingUser); result.Error == nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Email already taken"})
+	existingUser, err := controller.Repository.FindByEmail(body.Email)
+
+	if existingUser != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to find user"})
 		return
 	}
 
@@ -45,9 +67,10 @@ func Signup(c *gin.Context) {
 	//Create a new user
 
 	user := models.User{Email: body.Email, Password: string(hash)}
-	result := initializers.DB.Create(&user)
+	// result := initializers.DB.Create(&user)
+	_, err = controller.Repository.Create(user)
 
-	if result.Error != nil {
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to create user"})
 		return
 	}
@@ -57,7 +80,7 @@ func Signup(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
-func Login(c *gin.Context) {
+func (controller *UserController) Login(c *gin.Context) {
 
 	//GET the email and password from the request
 
@@ -73,13 +96,10 @@ func Login(c *gin.Context) {
 
 	//look up the user by email
 
-	var existingUser models.User
-	initializers.DB.First(&existingUser, "email = ?", body.Email)
+	existingUser, e := controller.Repository.FindByEmail(body.Email)
 
-	//return an error if the user is not found
-
-	if existingUser.ID == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+	if e != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to find user"})
 		return
 	}
 
@@ -118,7 +138,13 @@ func Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 
-func Validate(c *gin.Context) {
+func (controller *UserController) Logout(c *gin.Context) {
+
+	c.SetCookie("Authorization", "", -1, "", "", false, true)
+	c.JSON(http.StatusOK, gin.H{})
+}
+
+func (controller *UserController) Validate(c *gin.Context) {
 
 	user, _ := c.Get("user")
 	c.JSON(http.StatusOK, gin.H{"message": user})

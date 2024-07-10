@@ -4,6 +4,7 @@ import (
 	"github.com/Bouchiba43/Auth-Go/controllers"
 	"github.com/Bouchiba43/Auth-Go/initializers"
 	"github.com/Bouchiba43/Auth-Go/middleware"
+	"github.com/Bouchiba43/Auth-Go/repositories"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,11 +15,15 @@ func init() {
 }
 
 func main() {
-	
+
 	r := gin.Default()
 
-	r.POST("/signup", controllers.Signup) 
-	r.POST("/login", controllers.Login)
-	r.GET("/validate", middleware.RequireAuth, controllers.Validate)
+	userController := controllers.NewUserController(repositories.NewUserRepository(initializers.DB))
+	r.GET("/", userController.GetAll)
+	r.POST("/signup", userController.Signup)
+	r.POST("/login", userController.Login)
+	r.POST("/logout", middleware.RequireAuth, userController.Logout)
+	r.GET("/validate", middleware.RequireAuth, userController.Validate)
+
 	r.Run()
 }

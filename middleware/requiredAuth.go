@@ -12,13 +12,12 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
-
-func RequireAuth(c *gin.Context){
+func RequireAuth(c *gin.Context) {
 
 	fmt.Println("In the middleware")
-	
+
 	//Get the cookie off request
-	tokenString,err := c.Cookie("Authorization")
+	tokenString, err := c.Cookie("Authorization")
 
 	if err != nil {
 		c.AbortWithStatus(http.StatusUnauthorized)
@@ -27,7 +26,7 @@ func RequireAuth(c *gin.Context){
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 
-		if _,ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
 
@@ -35,13 +34,13 @@ func RequireAuth(c *gin.Context){
 	})
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		
+
 		//check the expiration date
 		if float64(time.Now().Unix()) > claims["exp"].(float64) {
 			c.AbortWithStatus(http.StatusUnauthorized)
-		
+
 		}
-	
+
 		//find the user in the token sub
 
 		var user models.User
@@ -51,16 +50,16 @@ func RequireAuth(c *gin.Context){
 			c.AbortWithStatus(http.StatusUnauthorized)
 		}
 
-		//attach the user to request 
+		//attach the user to request
 
 		c.Set("user", user)
-	
+
 		//continue
 		c.Next()
-		
+
 	} else {
 		c.AbortWithStatus(http.StatusUnauthorized)
 	}
 
-
 }
+
